@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Q — Party Planner</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9f8f5;color:#1a1a1a;padding:24px 16px}
+.container{max-width:760px;margin:0 auto}
+h1{font-size:20px;font-weight:600;color:#1a1a1a}
+.sub{font-size:14px;color:#888;margin-top:2px;margin-bottom:20px}
+
+.sync-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:12px;color:#888;padding:8px 12px;background:#fff;border:1px solid #e8e8e8;border-radius:8px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background 0.3s}
+.sync-dot.connected{background:#22c55e}
+.sync-dot.syncing{background:#f59e0b}
+.sync-dot.error{background:#ef4444}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid #e5e5e5;margin-bottom:24px;flex-wrap:wrap}
+.tab{padding:8px 14px;font-size:13px;color:#888;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
+.tab.active{color:#1a1a1a;border-bottom:2px solid #BA7517;font-weight:500}
+.panel{display:none}.panel.active{display:block}
+
+.countdown-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.count-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px;text-align:center}
+.count-num{font-size:30px;font-weight:600;color:#1a1a1a}
+.count-label{font-size:11px;color:#aaa;margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:16px}
+.card h3{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:10px}
+.card p,.card li{font-size:13px;color:#555;line-height:1.7}
+.card ul{padding-left:16px}
+
+.phase{margin-bottom:20px}
+.phase-title{font-size:11px;font-weight:600;color:#BA7517;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+.check-item:last-child{border-bottom:none}
+.check-item input[type=checkbox]{margin-top:2px;accent-color:#BA7517;flex-shrink:0;cursor:pointer}
+.check-item label{font-size:13px;color:#333;cursor:pointer;line-height:1.5}
+.check-item.done label{text-decoration:line-through;color:#bbb}
+.urgent-badge{background:#fef2f2;color:#dc2626;font-size:11px;padding:1px 7px;border-radius:20px;margin-left:6px}
+
+.timeline-row{display:grid;grid-template-columns:88px 1fr;gap:12px}
+.tl-time{font-size:12px;font-weight:600;color:#BA7517;padding-top:10px;text-align:right}
+.tl-body{padding:8px 0 8px 16px;border-left:2px solid #f0f0f0;position:relative}
+.tl-body::before{content:'';position:absolute;left:-5px;top:14px;width:8px;height:8px;border-radius:50%;background:#BA7517}
+.tl-title{font-size:13px;font-weight:500;color:#1a1a1a}
+.tl-note{font-size:12px;color:#888;margin-top:2px;line-height:1.5}
+.tl-key{background:#eff6ff;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:4px;font-weight:500}
+.note-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:13px;color:#92400e;margin-bottom:20px;line-height:1.5}
+
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.role-card{background:#f9f8f5;border:1px solid #e8e8e8;border-radius:8px;padding:10px}
+.role-title{font-size:11px;font-weight:600;color:#BA7517;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.role-input{width:100%;font-size:13px;background:transparent;border:none;color:#1a1a1a;outline:none;font-family:inherit;padding:2px 0}
+.role-input:focus{border-bottom:1px solid #BA7517}
+
+.shop-item{display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:10px;padding:9px 0;border-bottom:1px solid #f0f0f0}
+.shop-item:last-child{border-bottom:none}
+.shop-badge{font-size:11px;padding:2px 9px;border-radius:20px;flex-shrink:0;margin-top:2px;font-weight:500;white-space:nowrap}
+.badge-done{background:#f0fdf4;color:#15803d}
+.badge-todo{background:#fffbeb;color:#b45309}
+.shop-name{font-size:13px;font-weight:500;color:#1a1a1a}
+.shop-note{font-size:12px;color:#888;margin-top:1px;line-height:1.4}
+.shop-right{text-align:right;min-width:80px;flex-shrink:0}
+.shop-price{font-size:13px;font-weight:600;color:#1a1a1a}
+.shop-qty{font-size:11px;color:#aaa;margin-top:1px}
+.shop-total-bar{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 16px;margin-top:14px}
+.shop-total-label{font-size:13px;color:#888}
+.shop-total-val{font-size:18px;font-weight:600;color:#1a1a1a}
+
+.stats-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.stat-pill{background:#fff;border:1px solid #e8e8e8;border-radius:20px;padding:4px 14px;font-size:12px;color:#888}
+.stat-pill span{font-weight:600;color:#1a1a1a}
+
+.guest-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.guest-controls input,.guest-controls select{font-size:13px;padding:7px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none}
+.guest-controls input{flex:1;min-width:120px}
+.add-btn{padding:7px 16px;font-size:13px;background:#BA7517;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:500}
+.add-btn:hover{background:#a0641a}
+.add-btn:disabled{background:#ccc;cursor:not-allowed}
+
+.guest-table{width:100%;border-collapse:collapse;font-size:13px}
+.guest-table th{font-size:11px;font-weight:600;color:#aaa;text-align:left;padding:6px 10px;border-bottom:1px solid #e8e8e8;text-transform:uppercase;letter-spacing:.04em}
+.guest-table td{padding:9px 10px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle}
+.rsvp-yes{color:#15803d;font-weight:500}
+.rsvp-no{color:#dc2626;font-weight:500}
+.rsvp-pending{color:#b45309}
+.del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:16px;padding:0 4px}
+.del-btn:hover{color:#dc2626}
+.addrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.addrow input{font-size:13px;padding:7px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none}
+.abtn{padding:7px 16px;font-size:13px;background:#BA7517;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:500}
+.abtn:hover{background:#a0641a}.abtn:disabled{background:#ccc;cursor:not-allowed}
+.xbtn{background:none;border:none;color:#ccc;cursor:pointer;font-size:16px;padding:0 4px;line-height:1}
+.xbtn:hover{color:#dc2626}
+.add-item-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed #e8e8e8}
+.add-item-row input{font-size:13px;padding:6px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none}
+.add-item-row input:focus{border-color:#BA7517}
+.add-item-row .inp-name{flex:1;min-width:120px}
+.add-item-row .inp-sm{width:80px}
+.add-item-row .inp-price{width:72px}
+.add-row-btn{padding:6px 14px;font-size:13px;background:#BA7517;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:500;white-space:nowrap}
+.add-row-btn:hover{background:#a0641a}
+.check-add-row{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed #e8e8e8}
+.check-add-row input{flex:1;font-size:13px;padding:6px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none}
+.check-add-row input:focus{border-color:#BA7517}
+.custom-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:14px;padding:0 4px;margin-left:auto;flex-shrink:0}
+.custom-del:hover{color:#dc2626}
+
+@media(max-width:520px){
+  .two-col{grid-template-columns:1fr}
+  .countdown-grid{grid-template-columns:repeat(2,1fr)}
+  .role-grid{grid-template-columns:1fr}
+  .guest-controls{flex-direction:column}
+  .guest-controls input,.guest-controls select,.add-btn{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div style="margin-bottom:16px">
+  <h1>Project Q</h1>
+  <div class="sub">April 18, 2026 &nbsp;·&nbsp; 4:30–7 pm &nbsp;·&nbsp; Home &nbsp;·&nbsp; ~25–40 guests</div>
+</div>
+
+<div class="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-label">Connecting to database…</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview')">Overview</button>
+  <button class="tab" onclick="switchTab('checklist')">Checklist</button>
+  <button class="tab" onclick="switchTab('dayof')">Day-of timeline</button>
+  <button class="tab" onclick="switchTab('surprise')">Surprise plan</button>
+  <button class="tab" onclick="switchTab('shopping')">Shopping list</button>
+  <button class="tab" onclick="switchTab('guests')">Guest tracker</button>
+</div>
+
+<!-- OVERVIEW -->
+<div id="overview" class="panel active">
+  <div class="countdown-grid" id="countdown"></div>
+  <div class="two-col">
+    <div class="card">
+      <h3>Key details</h3>
+      <p style="line-height:1.9">Guests: 25–40 &nbsp;·&nbsp; Home party<br>Format: mocktails + sushi<br>Kids present: yes<br>Party window: 4:30–6:30/7 pm<br>3 signature mocktails</p>
+    </div>
+    <div class="card">
+      <h3>Urgent this week</h3>
+      <ul>
+        <li>Send invites with surprise instructions</li>
+        <li>Assign your decoy person</li>
+        <li>Buy plates, cups, juice boxes</li>
+        <li>Finalize mocktail recipes</li>
+        <li>Call restaurant day before for sushi</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKLIST -->
+<div id="checklist" class="panel">
+  <div class="phase">
+    <div class="phase-title">Now — April 1–4 (do this week)</div>
+    <div id="phase1"></div>
+    <div class="check-add-row">
+      <input id="cl-inp-phase1" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addCheckItem('phase1')">
+      <button class="add-row-btn" onclick="addCheckItem('phase1')">+ Add</button>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-title">April 13–16 — final prep week</div>
+    <div id="phase2"></div>
+    <div class="check-add-row">
+      <input id="cl-inp-phase2" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addCheckItem('phase2')">
+      <button class="add-row-btn" onclick="addCheckItem('phase2')">+ Add</button>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-title">April 17 — day before</div>
+    <div id="phase3"></div>
+    <div class="check-add-row">
+      <input id="cl-inp-phase3" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addCheckItem('phase3')">
+      <button class="add-row-btn" onclick="addCheckItem('phase3')">+ Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAY-OF TIMELINE -->
+<div id="dayof" class="panel">
+  <div class="note-box">All guests must be inside and quiet by 4:45 pm. Jason arrives ~5:00 pm after picking up his mother. Coordinate via group text signal.</div>
+  <div id="timeline"></div>
+</div>
+
+<!-- SURPRISE PLAN -->
+<div id="surprise" class="panel">
+  <div class="card" style="margin-bottom:12px">
+    <h3>The decoy strategy</h3>
+    <p style="margin-bottom:8px">Jason will be out of the house in the morning for a family breakfast/outing. The plan:</p>
+    <ul style="margin-top:4px">
+      <li><strong>~1:30 pm</strong> — Buy him a movie ticket. He goes to the movie while setup happens at home.</li>
+      <li><strong>~4:30 pm</strong> — After the movie, he picks up his mother (coordinate her to be ready and keep him talking).</li>
+      <li><strong>~5:00 pm</strong> — He arrives home with his mother — SURPRISE!</li>
+    </ul>
+    <p style="margin-top:10px;font-size:12px;color:#888">Make sure his mother knows the plan and is briefed to delay slightly if guests aren't fully inside yet.</p>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>Guest communication</h3>
+    <ul>
+      <li>Invite must say: "THIS IS A SURPRISE — do not post on social, do not text him"</li>
+      <li>Arrival window: 4:00–4:15 pm sharp</li>
+      <li>Park a street away if possible</li>
+      <li>Brief all kids: "it's a secret game"</li>
+      <li>Set up a group text for day-of coordination</li>
+    </ul>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>Assign key roles</h3>
+    <div class="role-grid">
+      <div class="role-card"><div class="role-title">Decoy person</div><input class="role-input" id="role-decoy" placeholder="Who keeps him away?" onchange="saveRole('decoy',this.value)" /></div>
+      <div class="role-card"><div class="role-title">Front lookout</div><input class="role-input" id="role-lookout" placeholder="Who watches for the car?" onchange="saveRole('lookout',this.value)" /></div>
+      <div class="role-card"><div class="role-title">Door opener</div><input class="role-input" id="role-door" placeholder="Who opens the door?" onchange="saveRole('door',this.value)" /></div>
+      <div class="role-card"><div class="role-title">Kids wrangler</div><input class="role-input" id="role-kids" placeholder="Who keeps kids quiet?" onchange="saveRole('kids',this.value)" /></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Signal system</h3>
+    <ul>
+      <li>Decoy texts group "ETA 10 min" → guests wrap up and get in position</li>
+      <li>Decoy texts "pulling up" → lights dim, everyone quiet</li>
+      <li>Door opens → SURPRISE!</li>
+      <li>Designate one person to hit music immediately after</li>
+    </ul>
+  </div>
+</div>
+
+<!-- SHOPPING -->
+<div id="shopping" class="panel">
+  <div class="addrow" style="margin-bottom:16px">
+    <input id="sh-name" placeholder="Item name" style="flex:2;min-width:120px" onkeydown="if(event.key==='Enter')addShopItem()">
+    <input id="sh-qty" placeholder="Qty" style="width:80px">
+    <input id="sh-price" placeholder="Price $" type="number" min="0" style="width:80px">
+    <button class="abtn" onclick="addShopItem()">+ Add item</button>
+  </div>
+  <table id="shop-table" style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr>
+        <th style="text-align:left;font-size:11px;font-weight:600;color:#aaa;padding:6px 10px;border-bottom:1px solid #e8e8e8;text-transform:uppercase;letter-spacing:.04em">Item</th>
+        <th style="text-align:left;font-size:11px;font-weight:600;color:#aaa;padding:6px 10px;border-bottom:1px solid #e8e8e8;text-transform:uppercase;letter-spacing:.04em;width:80px">Qty</th>
+        <th style="text-align:left;font-size:11px;font-weight:600;color:#aaa;padding:6px 10px;border-bottom:1px solid #e8e8e8;text-transform:uppercase;letter-spacing:.04em;width:80px">Price</th>
+        <th style="border-bottom:1px solid #e8e8e8;width:32px"></th>
+      </tr>
+    </thead>
+    <tbody id="shop-tbody"></tbody>
+  </table>
+  <div id="shop-total-row" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:12px 10px;background:#fff;border:1px solid #e8e8e8;border-radius:10px">
+    <span style="font-size:13px;color:#888">Total</span>
+    <span id="shop-total-val" style="font-size:18px;font-weight:600;color:#1a1a1a">$0</span>
+  </div>
+</div>
+
+<!-- GUESTS -->
+<div id="guests" class="panel">
+  <div class="stats-row" id="guest-stats"></div>
+  <div class="guest-controls">
+    <input id="g-name" placeholder="Guest name" />
+    <select id="g-type"><option value="Adult">Adult</option><option value="Kid">Kid</option></select>
+    <select id="g-rsvp"><option value="Pending">Pending</option><option value="Yes">Yes</option><option value="No">No</option></select>
+    <input id="g-diet" placeholder="Dietary notes (optional)" />
+    <button class="add-btn" id="add-guest-btn" onclick="addGuest()">+ Add guest</button>
+  </div>
+  <table class="guest-table">
+    <thead><tr><th>#</th><th>Name</th><th>Type</th><th>RSVP</th><th>Dietary notes</th><th></th></tr></thead>
+    <tbody id="guest-tbody"></tbody>
+  </table>
+</div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.min.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyA8FgFXAYcYnEcIih3OoZPn8OMKLgyWRYc",
+  authDomain: "project-q-6d730.firebaseapp.com",
+  databaseURL: "https://project-q-6d730-default-rtdb.firebaseio.com",
+  projectId: "project-q-6d730",
+  storageBucket: "project-q-6d730.firebasestorage.app",
+  messagingSenderId: "656777200058",
+  appId: "1:656777200058:web:f75a22629bc223f0981d83"
+});
+var db = firebase.database();
+
+// SYNC STATUS
+var dot = document.getElementById('sync-dot');
+var lbl = document.getElementById('sync-label');
+function sync(s, m) {
+  dot.className = 'sync-dot ' + (s === 'on' ? 'connected' : s === 'busy' ? 'syncing' : 'error');
+  lbl.textContent = m;
+}
+var everConn = false;
+var connTimer = setTimeout(function() {
+  if (!everConn) sync('off', 'Cannot reach database — check internet connection');
+}, 8000);
+db.ref('.info/connected').on('value', function(s) {
+  if (s.val()) {
+    everConn = true;
+    clearTimeout(connTimer);
+    sync('on', 'Live — changes sync to both planners instantly');
+  } else {
+    if (everConn) sync('off', 'Offline — will reconnect automatically');
+  }
+});
+
+// TABS
+var TABS = ['overview','checklist','dayof','surprise','shopping','guests'];
+function switchTab(id) {
+  var tabs = document.querySelectorAll('.tab');
+  var panels = document.querySelectorAll('.panel');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('active', TABS[i] === id);
+  for (var i = 0; i < panels.length; i++) panels[i].classList.toggle('active', panels[i].id === id);
+}
+
+// COUNTDOWN
+function buildCountdown() {
+  var diff = new Date('2026-04-18T16:30:00') - new Date();
+  if (diff < 0) { document.getElementById('countdown').innerHTML = '<p style="font-size:13px;color:#aaa">Party time!</p>'; return; }
+  var parts = [
+    {v: Math.floor(diff/86400000), l: 'days'},
+    {v: Math.floor(diff%86400000/3600000), l: 'hours'},
+    {v: Math.floor(diff%3600000/60000), l: 'min'},
+    {v: Math.floor(diff%60000/1000), l: 'sec'}
+  ];
+  var html = '';
+  for (var i = 0; i < parts.length; i++) {
+    html += '<div class="count-card"><div class="count-num">' + String(parts[i].v).padStart(2,'0') + '</div><div class="count-label">' + parts[i].l + '</div></div>';
+  }
+  document.getElementById('countdown').innerHTML = html;
+}
+buildCountdown(); setInterval(buildCountdown, 1000);
+
+// CHECKLIST — preset items (using ph1/ph2/ph3 keys to match Firebase data)
+var presetItems = {
+  ph1: [
+    {t: 'Send invites with bold surprise language + RSVP deadline of April 12'},
+    {t: 'Assign your decoy person + brief them on the cover story', u: true},
+    {t: 'Confirm balloon decoration order/delivery date'},
+    {t: 'Finalize 3 signature mocktail recipes — names and ingredients'},
+    {t: 'Purchase plates (50ct dinner + 50ct appetizer) and napkins'},
+    {t: 'Purchase mocktail drinkware — glasses or clear cups for 3 drink stations'},
+    {t: 'Buy kids juice boxes (qty based on kids RSVP count)'}
+  ],
+  ph2: [
+    {t: 'Chase any pending RSVPs — final count needed'},
+    {t: 'Send group text to all guests: arrive 4-4:15pm, park away, phones silent'},
+    {t: 'Buy mocktail ingredients, mixers, and garnishes'},
+    {t: 'Buy ice and coolers for beverages'},
+    {t: 'Assign all surprise roles: decoy, lookout, door opener, music person, kids wrangler'},
+    {t: 'Plan sushi display layout and gather serving platters'},
+    {t: 'Buy "40" birthday candles or banner for cake moment'}
+  ],
+  ph3: [
+    {t: 'Call restaurant to reserve sushi order for next day', u: true},
+    {t: 'Confirm sushi pickup or delivery time with restaurant'},
+    {t: 'Set up all balloon decorations'},
+    {t: 'Set tables: plates, napkins, cups, utensils'},
+    {t: 'Prep mocktail bases or syrups if needed'},
+    {t: 'Chill all beverages and juice boxes overnight'},
+    {t: 'Send final reminder text to ALL guests: do not text him, arrive by 4:15'},
+    {t: 'Set up kids area with juice boxes and any activities'}
+  ]
+};
+
+function buildPreset(phase, containerId) {
+  var items = presetItems[phase];
+  var div = document.getElementById(containerId);
+  if (!div) return;
+  for (var i = 0; i < items.length; i++) {
+    var key = phase + '_' + i;
+    var row = document.createElement('div');
+    row.className = 'check-item';
+    row.id = 'row-' + key;
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'cb-' + key;
+    cb.dataset.key = key;
+    cb.addEventListener('change', function() { toggleCL(this.dataset.key, this.checked); });
+    var lbl = document.createElement('label');
+    lbl.setAttribute('for', 'cb-' + key);
+    lbl.innerHTML = items[i].t + (items[i].u ? '<span class="urgent-badge">urgent</span>' : '');
+    row.appendChild(cb);
+    row.appendChild(lbl);
+    div.appendChild(row);
+  }
+}
+buildPreset('ph1', 'phase1');
+buildPreset('ph2', 'phase2');
+buildPreset('ph3', 'phase3');
+
+db.ref('checklist').on('value', function(snap) {
+  var data = snap.val() || {};
+  Object.keys(data).forEach(function(key) {
+    var cb = document.getElementById('cb-' + key);
+    var row = document.getElementById('row-' + key);
+    if (cb) { cb.checked = !!data[key]; if (row) row.classList.toggle('done', !!data[key]); }
+  });
+});
+
+function toggleCL(key, val) {
+  sync('busy', 'Saving...');
+  db.ref('checklist/' + key).set(val).then(function() { sync('on', 'Live — changes sync to both planners instantly'); });
+}
+
+// CUSTOM CHECKLIST
+var customData = {};
+
+db.ref('customChecklist').on('value', function(snap) {
+  customData = snap.val() || {};
+  renderCustom();
+});
+
+function addCheckItem(phase) {
+  var inp = document.getElementById('cl-inp-' + phase);
+  if (!inp) return;
+  var text = inp.value.trim();
+  if (!text) return;
+  var key = 'cl' + Date.now();
+  sync('busy', 'Saving...');
+  db.ref('customChecklist/' + key).set({t: text, phase: phase, checked: false, ts: Date.now()})
+    .then(function() {
+      inp.value = '';
+      sync('on', 'Live — changes sync to both planners instantly');
+    });
+}
+
+function renderCustom() {
+  var phases = ['ph1','ph2','ph3'];
+  var phaseContainers = {ph1:'phase1', ph2:'phase2', ph3:'phase3'};
+  var buckets = {ph1:[], ph2:[], ph3:[]};
+  var keys = Object.keys(customData).sort(function(a,b) { return (customData[a].ts||0) - (customData[b].ts||0); });
+  for (var i = 0; i < keys.length; i++) {
+    var item = customData[keys[i]];
+    var p = item.phase;
+    if (!buckets[p]) p = 'ph3';
+    buckets[p].push({key: keys[i], item: item});
+  }
+  for (var pi = 0; pi < phases.length; pi++) {
+    var phase = phases[pi];
+    var container = document.getElementById(phaseContainers[phase]);
+    if (!container) continue;
+    var old = container.querySelector('.custom-block');
+    if (old) old.parentNode.removeChild(old);
+    if (buckets[phase].length === 0) continue;
+    var block = document.createElement('div');
+    block.className = 'custom-block';
+    for (var bi = 0; bi < buckets[phase].length; bi++) {
+      var entry = buckets[phase][bi];
+      var row = document.createElement('div');
+      row.className = 'check-item' + (entry.item.checked ? ' done' : '');
+      row.id = 'crow-' + entry.key;
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!entry.item.checked;
+      cb.dataset.key = entry.key;
+      cb.addEventListener('change', function() {
+        var k = this.dataset.key;
+        sync('busy','Saving...');
+        db.ref('customChecklist/' + k + '/checked').set(this.checked)
+          .then(function() { sync('on','Live — changes sync to both planners instantly'); });
+      });
+      var lbl = document.createElement('label');
+      lbl.style.flex = '1';
+      lbl.textContent = entry.item.t;
+      var xbtn = document.createElement('button');
+      xbtn.className = 'custom-del';
+      xbtn.textContent = '×';
+      xbtn.dataset.key = entry.key;
+      xbtn.addEventListener('click', function() {
+        var k = this.dataset.key;
+        sync('busy','Saving...');
+        db.ref('customChecklist/' + k).remove()
+          .then(function() { sync('on','Live — changes sync to both planners instantly'); });
+      });
+      row.appendChild(cb);
+      row.appendChild(lbl);
+      row.appendChild(xbtn);
+      block.appendChild(row);
+    }
+    container.appendChild(block);
+  }
+}
+
+// TIMELINE
+var tlData = [
+  {t:'12:00 pm', ti:'Final house setup', n:'Rearrange furniture for flow, clear entryway for the big reveal'},
+  {t:'2:00 pm',  ti:'Balloon & decor complete', n:'All decorations up before guests start arriving'},
+  {t:'3:00 pm',  ti:'Tables set', n:'Plates, drinkware, napkins, sushi platters laid out'},
+  {t:'3:30 pm',  ti:'Mocktail station ready', n:'Ingredients prepped, labels on each drink station, garnishes set'},
+  {t:'3:45 pm',  ti:'Kids setup done', n:'Juice boxes and kids snacks or activity corner in place'},
+  {t:'4:00 pm',  ti:'Guests begin arriving', n:'Door greeter in place — welcome quietly, keep energy contained'},
+  {t:'4:45 pm',  ti:'Doors closed', n:'Every guest must be inside. No more arrivals. Phones silent.', k:'key moment'},
+  {t:'4:50 pm',  ti:'Decoy texts the signal', n:'Jason texted he is on his way — everyone takes their positions'},
+  {t:'4:55 pm',  ti:'Full quiet mode', n:'Music off, keep it still — kids managed and ready'},
+  {t:'5:00 pm',  ti:'SURPRISE!', n:'Jason arrives with his mother — door opens, everyone shouts, music on immediately', k:'key moment'},
+  {t:'5:00–5:30',ti:'Mocktail welcome hour', n:'3 signature mocktails served, mingling and catching up'},
+  {t:'5:15 pm',  ti:'Sushi served', n:'Sushi spread opened, guests serve themselves'},
+  {t:'5:30 pm',  ti:'Lien — balloon artist arrives', n:'Balloon artist on for 1 hour — great for kids and fun for adults', k:'Lien'},
+  {t:'5:45 pm',  ti:'Cake & toasts', n:'40th birthday moment — candles, speech, photos'},
+  {t:'6:30 pm',  ti:'Wind down begins', n:'Gentle wrap-up, guests start to head out'},
+  {t:'7:00 pm',  ti:'Party closes', n:''}
+];
+var tldiv = document.getElementById('timeline');
+for (var ti = 0; ti < tlData.length; ti++) {
+  var e = tlData[ti];
+  var row = '<div class="timeline-row"><div class="tl-time">' + e.t + '</div><div class="tl-body"><div class="tl-title">' + e.ti + '</div>';
+  if (e.n) row += '<div class="tl-note">' + e.n + '</div>';
+  if (e.k) row += '<span class="tl-key">' + e.k + '</span>';
+  row += '</div></div>';
+  tldiv.innerHTML += row;
+}
+
+// ROLES
+var roleNames = ['decoy','lookout','door','kids'];
+for (var ri = 0; ri < roleNames.length; ri++) {
+  (function(name) {
+    var el = document.getElementById('role-' + name);
+    if (!el) return;
+    el.addEventListener('change', function() {
+      sync('busy','Saving...');
+      db.ref('roles/' + name).set(this.value)
+        .then(function() { sync('on','Live — changes sync to both planners instantly'); });
+    });
+  })(roleNames[ri]);
+}
+db.ref('roles').on('value', function(snap) {
+  var data = snap.val() || {};
+  for (var ri = 0; ri < roleNames.length; ri++) {
+    var el = document.getElementById('role-' + roleNames[ri]);
+    if (el && data[roleNames[ri]]) el.value = data[roleNames[ri]];
+  }
+});
+
+// SHOPPING
+var shopData = {};
+
+db.ref('shopping').on('value', function(snap) {
+  shopData = snap.val() || {};
+  renderShopList();
+});
+
+function renderShopList() {
+  var tbody = document.getElementById('shop-tbody');
+  tbody.innerHTML = '';
+  var keys = Object.keys(shopData).sort(function(a,b) { return (shopData[a].ts||0) - (shopData[b].ts||0); });
+  var total = 0;
+  if (!keys.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#bbb;padding:24px;font-size:13px">No items yet — add one above</td></tr>';
+    document.getElementById('shop-total-val').textContent = '$0';
+    return;
+  }
+  for (var j = 0; j < keys.length; j++) {
+    var key = keys[j];
+    var item = shopData[key];
+    total += (item.price || 0);
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f0f0f0';
+    if (item.checked) tr.style.opacity = '0.45';
+
+    var nameTd = document.createElement('td');
+    nameTd.style.cssText = 'padding:9px 10px;vertical-align:middle';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!item.checked;
+    cb.style.cssText = 'accent-color:#BA7517;cursor:pointer;margin-right:8px;vertical-align:middle';
+    (function(k) {
+      cb.addEventListener('change', function() {
+        sync('busy','Saving...');
+        db.ref('shopping/' + k + '/checked').set(this.checked)
+          .then(function() { sync('on','Live — changes sync to both planners instantly'); });
+      });
+    })(key);
+    var nameSpan = document.createElement('span');
+    nameSpan.textContent = item.n || item.name || '';
+    nameSpan.style.cssText = item.checked ? 'text-decoration:line-through;color:#bbb' : '';
+    nameTd.appendChild(cb); nameTd.appendChild(nameSpan);
+
+    var qtyTd = document.createElement('td');
+    qtyTd.style.cssText = 'padding:9px 10px;color:#888;vertical-align:middle';
+    qtyTd.textContent = item.qty || '—';
+
+    var priceTd = document.createElement('td');
+    priceTd.style.cssText = 'padding:9px 10px;font-weight:600;vertical-align:middle';
+    priceTd.textContent = item.price ? '$' + item.price : '—';
+
+    var delTd = document.createElement('td');
+    delTd.style.cssText = 'padding:9px 4px;vertical-align:middle;text-align:center';
+    var xbtn = document.createElement('button');
+    xbtn.className = 'xbtn'; xbtn.textContent = '×';
+    (function(k) {
+      xbtn.addEventListener('click', function() {
+        sync('busy','Saving...');
+        db.ref('shopping/' + k).remove()
+          .then(function() { sync('on','Live — changes sync to both planners instantly'); });
+      });
+    })(key);
+    delTd.appendChild(xbtn);
+
+    tr.appendChild(nameTd); tr.appendChild(qtyTd); tr.appendChild(priceTd); tr.appendChild(delTd);
+    tbody.appendChild(tr);
+  }
+  document.getElementById('shop-total-val').textContent = '$' + total.toLocaleString();
+}
+
+function addShopItem() {
+  var name = document.getElementById('sh-name').value.trim();
+  if (!name) return;
+  var qty = document.getElementById('sh-qty').value.trim();
+  var priceRaw = document.getElementById('sh-price').value;
+  var price = priceRaw ? parseFloat(priceRaw) : null;
+  var key = 's' + Date.now();
+  sync('busy', 'Saving...');
+  db.ref('shopping/' + key).set({n: name, qty: qty || '—', price: price, checked: false, ts: Date.now()})
+    .then(function() {
+      document.getElementById('sh-name').value = '';
+      document.getElementById('sh-qty').value = '';
+      document.getElementById('sh-price').value = '';
+      sync('on', 'Live — changes sync to both planners instantly');
+    });
+}
+var shInp = document.getElementById('sh-name'); if (shInp) shInp.addEventListener('keydown', function(e) { if (e.key === 'Enter') addShopItem(); });
+
+// GUESTS
+var guestData = {};
+
+db.ref('guests').on('value', function(snap) {
+  guestData = snap.val() || {};
+  renderGuests();
+});
+
+function addGuest() {
+  var name = document.getElementById('g-name').value.trim();
+  if (!name) return;
+  document.getElementById('add-guest-btn').disabled = true;
+  sync('busy', 'Saving...');
+  db.ref('guests/g' + Date.now()).set({
+    name: name,
+    type: document.getElementById('g-type').value,
+    rsvp: document.getElementById('g-rsvp').value,
+    diet: document.getElementById('g-diet').value.trim(),
+    ts: Date.now()
+  }).then(function() {
+    document.getElementById('g-name').value = '';
+    document.getElementById('g-diet').value = '';
+    document.getElementById('add-guest-btn').disabled = false;
+    sync('on', 'Live — changes sync to both planners instantly');
+  });
+}
+document.getElementById('g-name').addEventListener('keydown', function(e) { if (e.key === 'Enter') addGuest(); });
+
+function removeGuest(key) {
+  sync('busy', 'Saving...');
+  db.ref('guests/' + key).remove()
+    .then(function() { sync('on', 'Live — changes sync to both planners instantly'); });
+}
+
+function updateRsvp(key, val) {
+  sync('busy', 'Saving...');
+  db.ref('guests/' + key + '/rsvp').set(val)
+    .then(function() { sync('on', 'Live — changes sync to both planners instantly'); });
+}
+
+function renderGuests() {
+  var keys = Object.keys(guestData).sort(function(a,b) { return (guestData[a].ts||0) - (guestData[b].ts||0); });
+  var yes = 0, pending = 0, kids = 0;
+  for (var i = 0; i < keys.length; i++) {
+    var g = guestData[keys[i]];
+    if (g.rsvp === 'Yes') yes++;
+    if (g.rsvp === 'Pending') pending++;
+    if (g.type === 'Kid') kids++;
+  }
+  document.getElementById('guest-stats').innerHTML =
+    '<div class="stat-pill">Total: <span>' + keys.length + '</span></div>' +
+    '<div class="stat-pill">Confirmed: <span>' + yes + '</span></div>' +
+    '<div class="stat-pill">Pending: <span>' + pending + '</span></div>' +
+    '<div class="stat-pill">Kids: <span>' + kids + '</span></div>';
+
+  var tbody = document.getElementById('guest-tbody');
+  tbody.innerHTML = '';
+  if (!keys.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#bbb;padding:24px;font-size:13px">No guests added yet</td></tr>';
+    return;
+  }
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var g = guestData[key];
+    var tr = document.createElement('tr');
+
+    var numTd = document.createElement('td'); numTd.style.color = '#bbb'; numTd.textContent = i + 1;
+    var nameTd = document.createElement('td'); nameTd.textContent = g.name;
+    var typeTd = document.createElement('td'); typeTd.style.color = '#888'; typeTd.textContent = g.type;
+
+    var rsvpTd = document.createElement('td');
+    var sel = document.createElement('select');
+    sel.style.cssText = 'font-size:12px;border:1px solid #e0e0e0;border-radius:6px;padding:3px 6px;background:#fff;font-family:inherit;color:inherit';
+    sel.dataset.key = key;
+    ['Pending','Yes','No'].forEach(function(v) {
+      var opt = document.createElement('option'); opt.value = v; opt.textContent = v;
+      if (g.rsvp === v) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function() {
+      var k = this.dataset.key;
+      sync('busy','Saving...');
+      db.ref('guests/' + k + '/rsvp').set(this.value)
+        .then(function() { sync('on','Live — changes sync to both planners instantly'); });
+    });
+    rsvpTd.appendChild(sel);
+
+    var dietTd = document.createElement('td'); dietTd.style.color = '#888'; dietTd.textContent = g.diet || '—';
+
+    var delTd = document.createElement('td');
+    var xbtn = document.createElement('button'); xbtn.className = 'del-btn'; xbtn.textContent = '×';
+    (function(k) {
+      xbtn.addEventListener('click', function() {
+        sync('busy','Saving...');
+        db.ref('guests/' + k).remove()
+          .then(function() { sync('on','Live — changes sync to both planners instantly'); });
+      });
+    })(key);
+    delTd.appendChild(xbtn);
+
+    tr.appendChild(numTd); tr.appendChild(nameTd); tr.appendChild(typeTd);
+    tr.appendChild(rsvpTd); tr.appendChild(dietTd); tr.appendChild(delTd);
+    tbody.appendChild(tr);
+  }
+}
+</script>
+</body>
+</html>
